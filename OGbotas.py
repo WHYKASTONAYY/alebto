@@ -43,7 +43,7 @@ if not VOTING_GROUP_CHAT_ID:
 # Constants
 TIMEZONE = pytz.timezone('Europe/Vilnius')
 COINFLIP_STICKER_ID = 'CAACAgIAAxkBAAEN32tnuPb-ovynJR5WNO1TQyv_ea17DwAC-RkAAtswEEqAzfrZRd8B1zYE'
-VOTING_GROUP_LINK = "https://t.me/VotingGroupName"  # Replace with your voting group link
+VOTING_GROUP_LINK = "@apsisaugokbalsuok"  # Replace with your voting group link
 
 # Data loading and saving functions
 def load_data(filename, default):
