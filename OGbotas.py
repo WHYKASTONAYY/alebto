@@ -25,6 +25,7 @@ ADMIN_CHAT_ID = os.getenv('ADMIN_CHAT_ID')
 GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
 VOTING_GROUP_CHAT_ID = os.getenv('VOTING_GROUP_CHAT_ID')
 PASSWORD = os.getenv('PASSWORD', 'shoebot123')
+VOTING_GROUP_LINK = os.getenv('VOTING_GROUP_LINK')
 
 # Check if required environment variables are set
 if not TOKEN:
@@ -39,11 +40,13 @@ if not GROUP_CHAT_ID:
 if not VOTING_GROUP_CHAT_ID:
     logger.error("VOTING_GROUP_CHAT_ID environment variable is not set.")
     sys.exit(1)
+if not VOTING_GROUP_LINK:
+    logger.error("VOTING_GROUP_LINK environment variable is not set.")
+    sys.exit(1)
 
 # Constants
 TIMEZONE = pytz.timezone('Europe/Vilnius')
 COINFLIP_STICKER_ID = 'CAACAgIAAxkBAAEN32tnuPb-ovynJR5WNO1TQyv_ea17DwAC-RkAAtswEEqAzfrZRd8B1zYE'
-VOTING_GROUP_LINK = "@ApsisaugokBalsuok"  # Replace with your voting group link
 
 # Data loading and saving functions
 def load_data(filename, default):
@@ -352,7 +355,8 @@ async def balsuoju(update: telegram.Update, context: telegram.ext.ContextTypes.D
         return
 
     msg = await update.message.reply_text(
-        f"Norėdami balsuoti, eikite į balsavimo grupę: {VOTING_GROUP_CHAT_ID}\nTen rasite balsavimo mygtukus!"
+        f'<a href="{VOTING_GROUP_LINK}">Spauskite čia</a> norėdami eiti į balsavimo grupę.\nTen rasite balsavimo mygtukus!',
+        parse_mode=telegram.constants.ParseMode.HTML
     )
     context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
 
@@ -663,7 +667,7 @@ async def approve(update: telegram.Update, context: telegram.ext.ContextTypes.DE
             context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
             return
         vendor, user_id, reason, timestamp = pending_downvotes[cid]
-        votes_weekly[vendor] -= 1  # Corrected from 'votes ativos_weekly' to 'votes_weekly'
+        votes_weekly[vendor] -= 1
         votes_monthly[vendor].append((timestamp, -1))
         votes_alltime[vendor] -= 1
         approved_downvotes[cid] = pending_downvotes[cid]
