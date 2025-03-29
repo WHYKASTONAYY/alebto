@@ -43,7 +43,7 @@ if not VOTING_GROUP_CHAT_ID:
 # Constants
 TIMEZONE = pytz.timezone('Europe/Vilnius')
 COINFLIP_STICKER_ID = 'CAACAgIAAxkBAAEN32tnuPb-ovynJR5WNO1TQyv_ea17DwAC-RkAAtswEEqAzfrZRd8B1zYE'
-VOTING_GROUP_LINK = "@apsisaugokbalsuok"  # Replace with your voting group link
+VOTING_GROUP_LINK = "https://t.me/VotingGroupName"  # Replace with your voting group link
 
 # Data loading and saving functions
 def load_data(filename, default):
@@ -73,7 +73,7 @@ featured_media_id = load_data('featured_media_id.pkl', None)
 featured_media_type = load_data('featured_media_type.pkl', None)
 barygos_media_id = load_data('barygos_media_id.pkl', None)
 barygos_media_type = load_data('barygos_media_type.pkl', None)
-voting_message_id = load_data('voting_message_id.pkl', None)  # Store the pinned message ID
+voting_message_id = load_data('voting_message_id.pkl', None)
 
 PARDAVEJAI_MESSAGE_FILE = 'pardavejai_message.pkl'
 DEFAULT_PARDAVEJAI_MESSAGE = "Pasirink pardavėją, už kurį nori balsuoti:"
@@ -149,7 +149,6 @@ async def update_voting_message(context):
 
     try:
         if voting_message_id:
-            # Try to edit the existing message
             try:
                 if featured_media_type == 'photo':
                     await context.bot.edit_message_media(
@@ -179,12 +178,11 @@ async def update_voting_message(context):
                         text=pardavejai_message,
                         reply_markup=reply_markup
                     )
-                logger.info(f"Updated voting message ID {voting_message_id}")
+                logger.info(f"Successfully updated voting message ID {voting_message_id}")
             except telegram.error.BadRequest as e:
-                logger.warning(f"Failed to edit voting message: {str(e)}. Recreating...")
+                logger.warning(f"Failed to edit voting message ID {voting_message_id}: {str(e)}. Recreating...")
                 voting_message_id = None
         if not voting_message_id:
-            # Create a new message if none exists or editing failed
             if featured_media_type == 'photo':
                 msg = await context.bot.send_photo(
                     chat_id=VOTING_GROUP_CHAT_ID,
@@ -353,9 +351,8 @@ async def balsuoju(update: telegram.Update, context: telegram.ext.ContextTypes.D
         context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
         return
 
-    # Send a link to the voting group with the persistent voting message
     msg = await update.message.reply_text(
-        f"Norėdami balsuoti, eikite į balsavimo grupę: {VOTING_GROUP_LINK}\nTen rasite balsavimo mygtukus!"
+        f"Norėdami balsuoti, eikite į balsavimo grupę: {VOTING_GROUP_CHAT_ID}\nTen rasite balsavimo mygtukus!"
     )
     context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
 
@@ -380,7 +377,6 @@ async def handle_vote_button(update: telegram.Update, context: telegram.ext.Cont
         logger.warning(f"Invalid callback data: {data} from user_id={user_id}")
         return
 
-    # Parse callback data: vote_<seller>
     seller = data.replace("vote_", "")
     if seller not in trusted_sellers:
         await query.answer("Šis pardavėjas nebegalioja!")
@@ -410,13 +406,27 @@ async def handle_vote_button(update: telegram.Update, context: telegram.ext.Cont
     last_vote_attempt[user_id] = now
 
     await query.answer("Ačiū už jūsų balsą, 5 taškai buvo pridėti prie jūsų sąskaitos.")
-    await context.bot.send_message(chat_id=chat_id, text=f"Ačiū už jūsų balsą už {seller}, 5 taškai pridėti!")
+    confirmation_msg = await context.bot.send_message(chat_id=chat_id, text=f"Ačiū už jūsų balsą už {seller}, 5 taškai buvo pridėti!")
+    
+    # Schedule deletion of the confirmation message after 60 seconds
+    context.job_queue.run_once(delete_message_job, 60, context=(chat_id, confirmation_msg.message_id))
     
     save_data(votes_weekly, 'votes_weekly.pkl')
     save_data(votes_monthly, 'votes_monthly.pkl')
     save_data(votes_alltime, 'votes_alltime.pkl')
     save_data(vote_history, 'vote_history.pkl')
     save_data(user_points, 'user_points.pkl')
+
+async def updatevoting(update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = str(update.message.from_user.id)
+    chat_id = update.message.chat_id
+    if user_id != ADMIN_CHAT_ID:
+        msg = await update.message.reply_text("Tik adminas gali atnaujinti balsavimo mygtukus!")
+        context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
+        return
+    await update_voting_message(context)
+    msg = await update.message.reply_text("Balsavimo mygtukai atnaujinti!")
+    context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
 
 async def addftbaryga(update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
     user_id = str(update.message.from_user.id)
@@ -653,7 +663,7 @@ async def approve(update: telegram.Update, context: telegram.ext.ContextTypes.DE
             context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
             return
         vendor, user_id, reason, timestamp = pending_downvotes[cid]
-        votes_weekly[vendor] -= 1
+        votes ativos_weekly[vendor] -= 1
         votes_monthly[vendor].append((timestamp, -1))
         votes_alltime[vendor] -= 1
         approved_downvotes[cid] = pending_downvotes[cid]
@@ -902,7 +912,7 @@ async def weekly_recap(context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
 async def coinflip(update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat_id
     if not is_allowed_group(chat_id):
-        msg = await update.message.reply_text("Botas neveikia šioje grupėje!")
+        msg = await update.message.text("Botas neveikia šioje grupėje!")
         context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
         return
     initiator_id = update.message.from_user.id
@@ -1073,6 +1083,7 @@ application.add_handler(CommandHandler(['addftbaryga'], addftbaryga))
 application.add_handler(CommandHandler(['addftbaryga2'], addftbaryga2))
 application.add_handler(CommandHandler(['editpardavejai'], editpardavejai))
 application.add_handler(CommandHandler(['apklausa'], apklausa))
+application.add_handler(CommandHandler(['updatevoting'], updatevoting))
 application.add_handler(CommandHandler(['privatus'], privatus))
 application.add_handler(MessageHandler(filters.Regex('^/start$') & filters.ChatType.PRIVATE, start_private))
 application.add_handler(CallbackQueryHandler(handle_vote_button, pattern="vote_"))
