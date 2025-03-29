@@ -663,7 +663,7 @@ async def approve(update: telegram.Update, context: telegram.ext.ContextTypes.DE
             context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
             return
         vendor, user_id, reason, timestamp = pending_downvotes[cid]
-        votes ativos_weekly[vendor] -= 1
+        votes_weekly[vendor] -= 1  # Corrected from 'votes ativos_weekly' to 'votes_weekly'
         votes_monthly[vendor].append((timestamp, -1))
         votes_alltime[vendor] -= 1
         approved_downvotes[cid] = pending_downvotes[cid]
@@ -912,7 +912,7 @@ async def weekly_recap(context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
 async def coinflip(update: telegram.Update, context: telegram.ext.ContextTypes.DEFAULT_TYPE) -> None:
     chat_id = update.message.chat_id
     if not is_allowed_group(chat_id):
-        msg = await update.message.text("Botas neveikia šioje grupėje!")
+        msg = await update.message.reply_text("Botas neveikia šioje grupėje!")
         context.job_queue.run_once(delete_message_job, 45, context=(chat_id, msg.message_id))
         return
     initiator_id = update.message.from_user.id
